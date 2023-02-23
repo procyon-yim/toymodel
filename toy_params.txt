@@ -1,0 +1,8 @@
+mass=1
+spring constant=2
+maximum energy=100
+number of stars=1000
+number of samples=200
+number of rings=2
+number of stars in each ring=400,400
+energy of each rings=30,80
