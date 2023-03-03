@@ -1,8 +1,11 @@
 mass=1
-spring constant=2
+spring constant=1
 maximum energy=100
-number of stars=1000
-number of samples=200
+number of stars=10
+number of samples=10
 number of rings=2
-number of stars in each ring=400,400
-energy of each rings=30,80
+number of stars in each ring=15, 15
+energy of each rings=65,30
+number of energy intervals=100
+number of x intervals=1000
+distribution function option=1

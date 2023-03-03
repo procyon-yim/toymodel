@@ -5,63 +5,55 @@ import matplotlib.pyplot as plt
 param = read_params('toy_params.txt')
 N_stars = param['number of stars']
 N_sample = param['number of samples']
-x_max = np.sqrt(2*param['maximum energy']/param['spring constant'])
-p_max = np.sqrt(2*param['maximum energy']*param['mass'])
 period = 2*np.pi*np.sqrt(param['mass']/param['spring constant'])
-pot = Potential(param)
-nE = 100
-nX = 1000
 
-w_init = allocate_stars(param)
+pscoord = allocate_stars(param)
 
 star_idx = np.random.choice(np.arange(N_stars), N_sample, replace=False)
 stars = list()
 for i in range(len(star_idx)):
-    stars.append({'idx':star_idx[i],'w_init': w_init[star_idx[i]], 'w_obs': None, 'minE': [], 'posterior': []})
+    stars.append({'idx':star_idx[i],'pscoord': pscoord[star_idx[i]], 'minE': [], 'posterior': []})
 
 for i in range(len(star_idx)):
-    t = np.random.random_sample()*period
-    w = observe(pot, t, stars[i]['w_init'])
-    stars[i]['w_obs'] = w
-    v = w[1] / param['mass']
-    cell = CellHolder()
-    cell.construct(nE, param, 'uniform')
-    prob_calculator(cell, v, param, nX)
+    w = stars[i]['pscoord']
+    cell = CellHolder(param)
+    pst = prob_calculator(cell, w, param)
     for c in cell.list:
         stars[i]['posterior'].append(c.posterior)
         stars[i]['minE'].append(c.minE)
 
-cells = CellHolder()
-cells.construct(nE, param, 'uniform')
-minE = list()
-for cell in cells.list:
-    minE.append(cell.minE)
 
-post_sum = np.zeros(len(stars[0]['minE']))
+post_overlap = np.ones(len(stars[0]['minE']))
 for star in stars:
-    post_sum += np.array(star['posterior'])
+    post_overlap *= np.array(star['posterior'])
+integ = 0
+for i in post_overlap:
+    integ += i * (stars[0]['minE'][1]-stars[0]['minE'][0])
+plt.subplot(3, 1, 1)
+plt.plot(stars[0]['minE'], post_overlap)
+plt.title('integrated region: %f'%integ)
 
-plt.plot(minE, post_sum)
+for star in stars:
+    plt.subplot(3,1,2)
+    plt.bar(star['minE'], star['posterior'], align='edge', width=0.3)
+    k = param['spring constant']
+    m = param['mass']
+    x = star['pscoord'][0]
+    p = star['pscoord'][1]
+    # energy = p**2/(2*m) + 1/2*k*x**2
+    # plt.bar(energy, max(star['posterior']))
+plt.xlabel('Energy range (J)')
+plt.ylabel('Posterior', fontsize=15)
+plt.subplot(3, 1, 3)
+for ring in param['energy of each rings']:
+    x_coord = np.sqrt(2*ring/param['spring constant'])
+    w = np.array([x_coord, 0])
+    x = trajectory(param, w)[0]
+    p = trajectory(param, w)[1]
+    plt.plot(x, p)
+
+for star in stars:
+    plt.plot(star['pscoord'][0], star['pscoord'][1], '.')
+plt.xlabel('x')
+plt.ylabel('p')
 plt.show()
-# for star in stars:
-#     plt.subplot(2,1,1)
-#     plt.bar(star['minE'], star['posterior'], align='edge', width=0.3)
-#     k = param['k']
-#     m = param['m']
-#     x = star['w_obs'][0]
-#     p = star['w_obs'][1]
-#     energy = p**2/(2*m) + 1/2*k*x**2
-#     plt.bar(energy, max(star['posterior']))
-# plt.xlabel('Energy range (J)')
-# plt.ylabel('Posterior', fontsize=15)
-# plt.subplot(2, 1, 2)
-# for w in orbits:
-#     x = trajectory(pot, w)[0]
-#     p = trajectory(pot, w)[1]
-#     plt.plot(x, p)
-#
-# for star in stars:
-#     plt.plot(star['w_obs'][0], star['w_obs'][1], '*')
-# plt.xlabel('x')
-# plt.ylabel('p')
-# plt.show()
