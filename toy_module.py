@@ -8,17 +8,28 @@ class Cell:
         _k = _param['spring constant']
         _E_limit = _param['maximum energy']
         _N_cell = _param['number of energy intervals']
+        _N_clusters = _param['number of rings']
+        _E_clusters = _param['energy of each rings']
         _dE = _E_limit/_N_cell
         if _idx > _N_cell - 1:
             raise Exception('index out of range')
         self.index = _idx
         self.maxE = (_idx+1)*_dE
         self.minE = _idx*_dE
-        if _param['distribution function option'] == 0:
-            self.df = np.random.random_sample()
-        elif _param['distribution function option'] == 1:
-            self.df = 1/(2*np.pi*_E_limit*np.sqrt(_m/_k))
         self.volume = 2*np.pi*(self.maxE-self.minE)*np.sqrt(_m/_k)
+
+        if _param['distribution function option'] == 0:  # DF weighted on cells with clusters
+            weight = 10
+            for _i in range(_N_clusters):
+                if self.minE <= _E_clusters[_i] < self.maxE:
+                    self.df = weight/(self.volume*((weight-1)*_N_clusters+_N_cell))
+                    break
+                else:
+                    self.df = 1/(self.volume*((weight-1)*_N_clusters+_N_cell))
+
+        elif _param['distribution function option'] == 1:  # uniform DF
+            self.df = 1/(2*np.pi*_E_limit*np.sqrt(_m/_k))
+
         self.posterior = 0
         self.likelihood = 0
         self.temp = 0
@@ -45,21 +56,39 @@ def read_params(_param_file):
             _value = _l.split('=')[1]
             if '\n' in _value:
                 if ',' not in _value:
-                    _value = int(_value[:_value.index('\n')])
+                    if '.' not in _value:
+                        _value = int(_value[:_value.index('\n')])
+                    else:
+                        _value = float(_value[:_value.index('\n')])
                 else:
-                    _value = _value[:_value.index('\n')]
-                    _value_lst = []
-                    for _i in _value.split(','):
-                        _value_lst.append(int(_i))
-                    _value = _value_lst
+                    if '.' not in _value:
+                        _value = _value[:_value.index('\n')]
+                        _value_lst = []
+                        for _i in _value.split(','):
+                            _value_lst.append(int(_i))
+                        _value = _value_lst
+                    else:
+                        _value = _value[:_value.index('\n')]
+                        _value_lst = []
+                        for _i in _value.split(','):
+                            _value_lst.append(float(_i))
+                        _value = _value_lst
             else:
                 if ',' not in _value:
-                    _value = int(_value)
+                    if '.' not in _value:
+                        _value = int(_value)
+                    else:
+                        _value = float(_value)
                 else:
                     _value_lst = []
-                    for _i in _value.split(','):
-                        _value_lst.append(int(_i))
-                    _value = _value_lst
+                    if '.' not in _value:
+                        for _i in _value.split(','):
+                            _value_lst.append(int(_i))
+                        _value = _value_lst
+                    else:
+                        for _i in _value.split(','):
+                            _value_lst.append(float(_i))
+                        _value = _value_lst
             _param[_key] = _value
     # Exceptions
     # if sum(_param['number of stars in each ring']) > _param['number of stars']:
@@ -81,7 +110,7 @@ def prob_calculator(_cell_holder,  _pscoord, _param):
     _x_max = np.sqrt((2*_E_limit-_m*_u**2)/_k)
     _x_range = np.linspace(-_x_max, _x_max, _n_x)
     _dx = _x_range[1] - _x_range[0]
-    _dp = 0.1 # finite width of momentum. (pdf의 차원을 맞춰주기 위해). 나중에 Monte-Carlo로 정확히 수정해야함.
+    _dp = 0.1  # finite width of momentum. (pdf의 차원을 맞춰주기 위해). 나중에 Monte-Carlo로 정확히 수정해야함.
     _minE = list()
     for _c in _cell_holder.list:
         _minE.append(_c.minE)
